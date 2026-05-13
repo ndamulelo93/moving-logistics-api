@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Enum types must be created first as all tables depend on them -->
+    <include file="db/changelog/001-enums.sql" relativeToChangelogFile="false"/>
+
+    <!-- Core admin and auth tables -->
+    <include file="db/changelog/002-admin-users.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/003-refresh-tokens.sql" relativeToChangelogFile="false"/>
+
+    <!-- Fleet management tables -->
+    <include file="db/changelog/004-vehicle-types.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/005-vehicles.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/006-drivers.sql" relativeToChangelogFile="false"/>
+
+    <!-- Pricing and zone configuration tables -->
+    <include file="db/changelog/007-pricing-rules.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/008-suburb-zones.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/009-zone-distances.sql" relativeToChangelogFile="false"/>
+
+    <!-- Service catalogue -->
+    <include file="db/changelog/010-services.sql" relativeToChangelogFile="false"/>
+
+    <!-- Booking and related tables (depend on vehicle_types, admin_users, drivers, vehicles) -->
+    <include file="db/changelog/011-bookings.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/012-booking-addresses.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/013-status-history.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/014-booking-assignments.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/015-payments.sql" relativeToChangelogFile="false"/>
+    <include file="db/changelog/016-notification-logs.sql" relativeToChangelogFile="false"/>
+
+    <!-- Seed data — must run after all tables are created -->
+    <include file="db/changelog/017-seed-admin.sql" relativeToChangelogFile="false"/>
+
+</databaseChangeLog>
