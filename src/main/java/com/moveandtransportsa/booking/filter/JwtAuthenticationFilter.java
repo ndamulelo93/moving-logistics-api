@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -37,7 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-            // No token present — let Spring Security handle the 401 if the endpoint requires auth
+            log.debug("JWT filter: no Bearer token on {} {}", request.getMethod(), request.getRequestURI());
             chain.doFilter(request, response);
             return;
         }
@@ -49,22 +51,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
 
+            log.debug("JWT filter: username={}, role={}, uri={}", username, role, request.getRequestURI());
+
             // Look up the user to get the numeric ID for logout support
             Long adminUserId = adminUserRepository.findByUsername(username)
                     .map(u -> u.getId())
                     .orElse(null);
 
             // Spring Security expects roles prefixed with ROLE_
-            SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
+            String authority = "ROLE_" + role;
+            log.debug("JWT filter: granting authority={}", authority);
 
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(username, null, List.of(authority));
+                    new UsernamePasswordAuthenticationToken(username, null, List.of(new SimpleGrantedAuthority(authority)));
 
             // Store the admin user ID in details so controllers can retrieve it
             authentication.setDetails(adminUserId);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            log.debug("JWT filter: authentication set successfully for user={}", username);
         } catch (Exception e) {
+            log.warn("JWT filter: token validation failed — {} — uri={}", e.getMessage(), request.getRequestURI());
             // Invalid token — clear context and let Spring Security return 401
             SecurityContextHolder.clearContext();
         }
