@@ -61,7 +61,11 @@ public class BookingService {
 
         Instant now = Instant.now();
 
+        // Generate reference before saving to avoid null constraint violation
+        String reference = bookingReferenceGenerator.generate(LocalDate.now().getYear());
+
         Booking booking = Booking.builder()
+                .bookingReference(reference)
                 .status(BookingStatus.PENDING)
                 .customerName(req.customerName())
                 .customerPhone(req.customerPhone())
@@ -76,11 +80,6 @@ public class BookingService {
                 .updatedAt(now)
                 .build();
 
-        booking = bookingRepository.save(booking);
-
-        // Generate and assign booking reference
-        String reference = bookingReferenceGenerator.generate(LocalDate.now().getYear());
-        booking.setBookingReference(reference);
         booking = bookingRepository.save(booking);
 
         // Persist pickup addresses
