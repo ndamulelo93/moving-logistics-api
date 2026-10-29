@@ -1,6 +1,8 @@
 package com.moveandtransportsa.booking.service;
 
+import com.moveandtransportsa.booking.dto.Address;
 import com.moveandtransportsa.booking.dto.request.QuoteRequest;
+import com.moveandtransportsa.booking.dto.request.QuoteRequestWithAddresses;
 import com.moveandtransportsa.booking.dto.response.PricingRuleResponse;
 import com.moveandtransportsa.booking.dto.response.QuoteResponse;
 import com.moveandtransportsa.booking.exception.PricingUnavailableException;
@@ -21,12 +23,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link QuoteService}.
  *
- * ZoneService and PricingService are mocked so no database is required.
+ * DistanceCalculator and PricingService are mocked so no database is required.
  *
  * Requirements covered: 1.1, 1.6
  */
@@ -34,7 +37,7 @@ import static org.mockito.Mockito.when;
 class QuoteServiceTest {
 
     @Mock
-    private ZoneService zoneService;
+    private DistanceCalculator distanceCalculator;
 
     @Mock
     private PricingService pricingService;
@@ -103,7 +106,7 @@ class QuoteServiceTest {
         LocalDate futureDate = LocalDate.now().plusDays(3);
         LocalTime businessHours = LocalTime.of(10, 0);
 
-        when(zoneService.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
         when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
 
         QuoteRequest request = buildRequest(0, futureDate, businessHours, false);
@@ -135,7 +138,7 @@ class QuoteServiceTest {
         LocalDate today = LocalDate.now(ZoneId.of("Africa/Johannesburg"));
         LocalTime businessHours = LocalTime.of(10, 0);
 
-        when(zoneService.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
         when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
 
         QuoteRequest request = buildRequest(0, today, businessHours, false);
@@ -159,7 +162,7 @@ class QuoteServiceTest {
         LocalDate futureDate = LocalDate.now().plusDays(1);
         LocalTime earlyMorning = LocalTime.of(6, 59);
 
-        when(zoneService.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
         when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
 
         QuoteRequest request = buildRequest(0, futureDate, earlyMorning, false);
@@ -179,7 +182,7 @@ class QuoteServiceTest {
         LocalDate futureDate = LocalDate.now().plusDays(1);
         LocalTime lateEvening = LocalTime.of(18, 1);
 
-        when(zoneService.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
         when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
 
         QuoteRequest request = buildRequest(0, futureDate, lateEvening, false);
@@ -201,7 +204,7 @@ class QuoteServiceTest {
         LocalDate futureDate = LocalDate.now().plusDays(2);
         LocalTime businessHours = LocalTime.of(9, 0);
 
-        when(zoneService.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
         when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
 
         QuoteRequest request = buildRequest(0, futureDate, businessHours, true);
@@ -216,13 +219,13 @@ class QuoteServiceTest {
     }
 
     // -----------------------------------------------------------------------
-    // Test 5: SuburbNotFoundException propagated from ZoneService
+    // Test 5: SuburbNotFoundException propagated from DistanceCalculator
     // -----------------------------------------------------------------------
 
     @Test
     void calculate_unknownPickupSuburb_throwsSuburbNotFoundException() {
-        // Arrange: ZoneService throws for unknown suburb
-        when(zoneService.getDistance(PICKUP, DROPOFF))
+        // Arrange: DistanceCalculator throws for unknown suburb
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF))
                 .thenThrow(new SuburbNotFoundException(PICKUP));
 
         QuoteRequest request = buildRequest(0, LocalDate.now().plusDays(1), LocalTime.of(10, 0), false);
@@ -239,8 +242,8 @@ class QuoteServiceTest {
 
     @Test
     void calculate_noPricingRule_throwsPricingUnavailableException() {
-        // Arrange: ZoneService returns a distance, but PricingService has no active rule
-        when(zoneService.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
+        // Arrange: DistanceCalculator returns a distance, but PricingService has no active rule
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
         when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class)))
                 .thenThrow(new PricingUnavailableException(VEHICLE_TYPE_ID));
 
@@ -262,7 +265,7 @@ class QuoteServiceTest {
         LocalDate futureDate = LocalDate.now().plusDays(3);
         LocalTime businessHours = LocalTime.of(11, 0);
 
-        when(zoneService.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
+        when(distanceCalculator.getDistance(PICKUP, DROPOFF)).thenReturn(DISTANCE_KM);
         when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
 
         QuoteRequest request = buildRequest(2, futureDate, businessHours, false);
@@ -274,5 +277,212 @@ class QuoteServiceTest {
         assertThat(response.breakdown().helpersFee()).isEqualByComparingTo(new BigDecimal("200.00"));
         // Total = 500 + 200 + 200 + 0 + 0 + 0 = 900
         assertThat(response.estimatedTotal()).isEqualByComparingTo(new BigDecimal("900.00"));
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests for calculateWithAddresses method
+    // -----------------------------------------------------------------------
+
+    /**
+     * Helper: build a QuoteRequestWithAddresses
+     */
+    private QuoteRequestWithAddresses buildAddressRequest(int helpers, LocalDate serviceDate, LocalTime serviceTime, boolean stairs) {
+        return new QuoteRequestWithAddresses(
+                "123 Main Street",
+                PICKUP,
+                "Gauteng",
+                "456 Oak Avenue",
+                DROPOFF,
+                "Gauteng",
+                VEHICLE_TYPE_ID,
+                helpers,
+                serviceDate,
+                serviceTime,
+                stairs
+        );
+    }
+
+    @Test
+    void calculateWithAddresses_noSurcharges_returnsCorrectTotal() {
+        // Arrange: future date (not same-day), business hours, no stairs, 0 helpers
+        LocalDate futureDate = LocalDate.now().plusDays(3);
+        LocalTime businessHours = LocalTime.of(10, 0);
+
+        Address pickup = new Address("123 Main Street", PICKUP, "Gauteng");
+        Address dropoff = new Address("456 Oak Avenue", DROPOFF, "Gauteng");
+
+        when(distanceCalculator.getDistance(eq(pickup), eq(dropoff))).thenReturn(DISTANCE_KM);
+        when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
+
+        QuoteRequestWithAddresses request = buildAddressRequest(0, futureDate, businessHours, false);
+
+        // Act
+        QuoteResponse response = quoteService.calculateWithAddresses(request);
+
+        // Assert: total = 500 + (20 × 10) + (0 × 100) = 700
+        BigDecimal expectedTotal = new BigDecimal("700.00");
+        assertThat(response.estimatedTotal()).isEqualByComparingTo(expectedTotal);
+        assertThat(response.distanceKm()).isEqualByComparingTo(DISTANCE_KM);
+
+        // Breakdown checks
+        assertThat(response.breakdown().baseFee()).isEqualByComparingTo(BASE_FEE);
+        assertThat(response.breakdown().distanceFee()).isEqualByComparingTo(new BigDecimal("200.00"));
+        assertThat(response.breakdown().helpersFee()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(response.breakdown().stairsSurcharge()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(response.breakdown().sameDaySurcharge()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(response.breakdown().afterHoursSurcharge()).isEqualByComparingTo(BigDecimal.ZERO);
+
+        // Verify Address objects were constructed and passed correctly
+        verify(distanceCalculator).getDistance(eq(pickup), eq(dropoff));
+    }
+
+    @Test
+    void calculateWithAddresses_sameDayService_appliesSameDaySurcharge() {
+        // Arrange: serviceDate = today in Africa/Johannesburg
+        LocalDate today = LocalDate.now(ZoneId.of("Africa/Johannesburg"));
+        LocalTime businessHours = LocalTime.of(10, 0);
+
+        Address pickup = new Address("123 Main Street", PICKUP, "Gauteng");
+        Address dropoff = new Address("456 Oak Avenue", DROPOFF, "Gauteng");
+
+        when(distanceCalculator.getDistance(eq(pickup), eq(dropoff))).thenReturn(DISTANCE_KM);
+        when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
+
+        QuoteRequestWithAddresses request = buildAddressRequest(0, today, businessHours, false);
+
+        // Act
+        QuoteResponse response = quoteService.calculateWithAddresses(request);
+
+        // Assert: same-day surcharge (200) is included
+        assertThat(response.breakdown().sameDaySurcharge()).isEqualByComparingTo(SAME_DAY_SURCHARGE);
+        // Total = 500 + 200 + 0 + 0 + 200 + 0 = 900
+        assertThat(response.estimatedTotal()).isEqualByComparingTo(new BigDecimal("900.00"));
+    }
+
+    @Test
+    void calculateWithAddresses_stairsTrue_appliesStairsSurcharge() {
+        // Arrange: future date, business hours, stairs=true
+        LocalDate futureDate = LocalDate.now().plusDays(2);
+        LocalTime businessHours = LocalTime.of(9, 0);
+
+        Address pickup = new Address("123 Main Street", PICKUP, "Gauteng");
+        Address dropoff = new Address("456 Oak Avenue", DROPOFF, "Gauteng");
+
+        when(distanceCalculator.getDistance(eq(pickup), eq(dropoff))).thenReturn(DISTANCE_KM);
+        when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
+
+        QuoteRequestWithAddresses request = buildAddressRequest(0, futureDate, businessHours, true);
+
+        // Act
+        QuoteResponse response = quoteService.calculateWithAddresses(request);
+
+        // Assert: stairs surcharge (150) is included
+        assertThat(response.breakdown().stairsSurcharge()).isEqualByComparingTo(STAIRS_SURCHARGE);
+        // Total = 500 + 200 + 0 + 150 + 0 + 0 = 850
+        assertThat(response.estimatedTotal()).isEqualByComparingTo(new BigDecimal("850.00"));
+    }
+
+    @Test
+    void calculateWithAddresses_afterHours_appliesAfterHoursSurcharge() {
+        // Arrange: future date, time after 18:00
+        LocalDate futureDate = LocalDate.now().plusDays(1);
+        LocalTime lateEvening = LocalTime.of(18, 1);
+
+        Address pickup = new Address("123 Main Street", PICKUP, "Gauteng");
+        Address dropoff = new Address("456 Oak Avenue", DROPOFF, "Gauteng");
+
+        when(distanceCalculator.getDistance(eq(pickup), eq(dropoff))).thenReturn(DISTANCE_KM);
+        when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
+
+        QuoteRequestWithAddresses request = buildAddressRequest(0, futureDate, lateEvening, false);
+
+        // Act
+        QuoteResponse response = quoteService.calculateWithAddresses(request);
+
+        // Assert: after-hours surcharge (250) is included
+        assertThat(response.breakdown().afterHoursSurcharge()).isEqualByComparingTo(AFTER_HOURS_SURCHARGE);
+        // Total = 500 + 200 + 0 + 0 + 0 + 250 = 950
+        assertThat(response.estimatedTotal()).isEqualByComparingTo(new BigDecimal("950.00"));
+    }
+
+    @Test
+    void calculateWithAddresses_withHelpers_includesHelpersFeeInTotal() {
+        // Arrange: 3 helpers, future date, business hours, no surcharges
+        LocalDate futureDate = LocalDate.now().plusDays(3);
+        LocalTime businessHours = LocalTime.of(11, 0);
+
+        Address pickup = new Address("123 Main Street", PICKUP, "Gauteng");
+        Address dropoff = new Address("456 Oak Avenue", DROPOFF, "Gauteng");
+
+        when(distanceCalculator.getDistance(eq(pickup), eq(dropoff))).thenReturn(DISTANCE_KM);
+        when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
+
+        QuoteRequestWithAddresses request = buildAddressRequest(3, futureDate, businessHours, false);
+
+        // Act
+        QuoteResponse response = quoteService.calculateWithAddresses(request);
+
+        // Assert: helpersFee = 3 × 100 = 300
+        assertThat(response.breakdown().helpersFee()).isEqualByComparingTo(new BigDecimal("300.00"));
+        // Total = 500 + 200 + 300 + 0 + 0 + 0 = 1000
+        assertThat(response.estimatedTotal()).isEqualByComparingTo(new BigDecimal("1000.00"));
+    }
+
+    @Test
+    void calculateWithAddresses_allSurcharges_includesAllInTotal() {
+        // Arrange: same-day, after-hours, stairs=true, 2 helpers
+        LocalDate today = LocalDate.now(ZoneId.of("Africa/Johannesburg"));
+        LocalTime earlyMorning = LocalTime.of(6, 0);
+
+        Address pickup = new Address("123 Main Street", PICKUP, "Gauteng");
+        Address dropoff = new Address("456 Oak Avenue", DROPOFF, "Gauteng");
+
+        when(distanceCalculator.getDistance(eq(pickup), eq(dropoff))).thenReturn(DISTANCE_KM);
+        when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
+
+        QuoteRequestWithAddresses request = buildAddressRequest(2, today, earlyMorning, true);
+
+        // Act
+        QuoteResponse response = quoteService.calculateWithAddresses(request);
+
+        // Assert: all surcharges applied
+        assertThat(response.breakdown().helpersFee()).isEqualByComparingTo(new BigDecimal("200.00"));
+        assertThat(response.breakdown().stairsSurcharge()).isEqualByComparingTo(STAIRS_SURCHARGE);
+        assertThat(response.breakdown().sameDaySurcharge()).isEqualByComparingTo(SAME_DAY_SURCHARGE);
+        assertThat(response.breakdown().afterHoursSurcharge()).isEqualByComparingTo(AFTER_HOURS_SURCHARGE);
+        // Total = 500 + 200 + 200 + 150 + 200 + 250 = 1500
+        assertThat(response.estimatedTotal()).isEqualByComparingTo(new BigDecimal("1500.00"));
+    }
+
+    @Test
+    void calculateWithAddresses_constructsAddressObjectsCorrectly() {
+        // Arrange: verify Address objects are constructed with correct fields
+        LocalDate futureDate = LocalDate.now().plusDays(1);
+        LocalTime businessHours = LocalTime.of(10, 0);
+
+        String pickupAddressLine = "789 Park Lane";
+        String pickupSuburb = "Rosebank";
+        String pickupCity = "Johannesburg";
+        String dropoffAddressLine = "321 Beach Road";
+        String dropoffSuburb = "Durban North";
+        String dropoffCity = "Durban";
+
+        Address expectedPickup = new Address(pickupAddressLine, pickupSuburb, pickupCity);
+        Address expectedDropoff = new Address(dropoffAddressLine, dropoffSuburb, dropoffCity);
+
+        when(distanceCalculator.getDistance(eq(expectedPickup), eq(expectedDropoff))).thenReturn(DISTANCE_KM);
+        when(pricingService.getActiveRule(eq(VEHICLE_TYPE_ID), any(LocalDate.class))).thenReturn(pricingRule);
+
+        QuoteRequestWithAddresses request = new QuoteRequestWithAddresses(
+                pickupAddressLine, pickupSuburb, pickupCity,
+                dropoffAddressLine, dropoffSuburb, dropoffCity,
+                VEHICLE_TYPE_ID, 0, futureDate, businessHours, false
+        );
+
+        // Act
+        quoteService.calculateWithAddresses(request);
+
+        // Assert: verify correct Address objects were passed to distanceCalculator
+        verify(distanceCalculator).getDistance(eq(expectedPickup), eq(expectedDropoff));
     }
 }

@@ -1,6 +1,8 @@
 package com.moveandtransportsa.booking.exception;
 
 import com.moveandtransportsa.booking.dto.response.ErrorEnvelope;
+import com.moveandtransportsa.booking.exception.distance.ApiKeyNotConfiguredException;
+import com.moveandtransportsa.booking.exception.distance.InvalidAddressException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -94,6 +96,11 @@ public class GlobalExceptionHandler {
         return buildResponse(req, HttpStatus.BAD_REQUEST, "Request body is malformed or missing", null);
     }
 
+    @ExceptionHandler(InvalidAddressException.class)
+    public ResponseEntity<ErrorEnvelope> handleInvalidAddress(InvalidAddressException ex, HttpServletRequest req) {
+        return buildResponse(req, HttpStatus.BAD_REQUEST, "Invalid address provided", null);
+    }
+
     // -------------------------------------------------------------------------
     // 403 Forbidden
     // -------------------------------------------------------------------------
@@ -115,6 +122,12 @@ public class GlobalExceptionHandler {
     // -------------------------------------------------------------------------
     // 500 Internal Server Error (catch-all)
     // -------------------------------------------------------------------------
+
+    @ExceptionHandler(ApiKeyNotConfiguredException.class)
+    public ResponseEntity<ErrorEnvelope> handleApiKeyNotConfigured(ApiKeyNotConfiguredException ex, HttpServletRequest req) {
+        log.error("API configuration error at {}: Google Maps API key not configured", req.getRequestURI());
+        return buildResponse(req, HttpStatus.INTERNAL_SERVER_ERROR, "Service configuration error", null);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorEnvelope> handleGeneral(Exception ex, HttpServletRequest req) {

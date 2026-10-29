@@ -36,4 +36,7 @@
     <!-- Seed data — must run after all tables are created -->
     <include file="db/changelog/017-seed-admin.sql" relativeToChangelogFile="false"/>
 
+    <!-- Distance cache for Google Maps API integration -->
+    <include file="db/changelog/018-distance-cache.sql" relativeToChangelogFile="false"/>
+
 </databaseChangeLog>

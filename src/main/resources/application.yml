@@ -33,19 +33,54 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       show-details: never
   health:
     mail:
       enabled: false
+  metrics:
+    tags:
+      application: transport-booking
 
 app:
   jwt:
     secret: ${JWT_SECRET:dev-secret-key-change-in-production-must-be-at-least-256-bits}
     expiry-seconds: 900
     refresh-expiry-days: 7
+
+google:
+  maps:
+    # Google Maps API key for Distance Matrix API access
+    # Should be provided via environment variable GOOGLE_MAPS_API_KEY for security
+    # Required when enabled=true, application will fail to start if missing
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+    
+    # Enable/disable Google Maps integration (default: true)
+    # When false, the system will use zone-based fallback for all distance calculations
+    # Useful for disabling API calls in certain environments without code changes
+    enabled: true
+    
+    # API request timeout in seconds (default: 5)
+    # Maximum time to wait for Google Maps API response before timing out
+    # Increase for slower networks, decrease to fail faster
+    timeout-seconds: 5
+    
+    # Rate limiting - maximum API requests per minute (default: 100)
+    # Prevents excessive API costs by limiting request frequency
+    # When exceeded, system automatically falls back to zone-based distance calculation
+    max-requests-per-minute: 100
+    
+    # Enable/disable response caching (default: true)
+    # Caches API responses in database to minimize API calls and costs
+    # Improves performance for frequently requested routes
+    cache-enabled: true
+    
+    # Cache entry time-to-live in days (default: 7)
+    # How long cached distances remain valid before requiring API refresh
+    # Longer TTL reduces API costs but may return outdated distances
+    cache-ttl-days: 7
 
 springdoc:
   swagger-ui:
